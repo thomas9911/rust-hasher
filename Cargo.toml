@@ -1,0 +1,36 @@
+[package]
+name = "hasher"
+version = "0.1.0"
+authors = ["thomas9911 <thomastimmer11@hotmail.com>"]
+edition = "2018"
+
+[features]
+default = ["sha2"]
+md5 = ["md-5"]
+sha1 = ["sha-1"]
+all = ["sha-1", "sha2", "sha3", "blake2", "md-5", "whirlpool", "ripemd160", "ripemd320", "groestl", "pruefung"]
+crypto = ["sha-1", "sha2", "sha3", "blake2", "md-5", "whirlpool", "ripemd160", "ripemd320", "groestl"]
+non-crypto = ["pruefung"]
+
+[dependencies]
+cfg-if = "*"
+clap = "*"
+digest = "*"
+sha-1 = { version = "*", optional = true }
+sha2 = { version = "*", optional = true }
+sha3 = { version = "*", optional = true }
+blake2 = { version = "*", optional = true }
+md-5 = { version = "*", optional = true }
+whirlpool = { version = "*", optional = true }
+ripemd160 = { version = "*", optional = true }
+ripemd320 = { version = "*", optional = true }
+groestl = { version = "*", optional = true }
+pruefung = { version = "*", optional = true}
+
+[lib]
+name = "hash_functions"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hasher"
+path = "src/main.rs"
