@@ -2,12 +2,15 @@
 extern crate pruefung;
 
 use cfg_if::cfg_if;
+
 use digest::Digest;
 use std::io;
 
 #[cfg(feature = "non-crypto")]
 use std::hash::Hasher;
 
+#[cfg(feature = "gost94")]
+use gost94::Digest as Gost94Digest;
 
 fn do_hash<D, F>(mut d: D, f: &mut F) -> String
 where
@@ -15,18 +18,45 @@ where
     <D as digest::Digest>::OutputSize: std::ops::Add,
     <<D as digest::Digest>::OutputSize as std::ops::Add>::Output:
         digest::generic_array::ArrayLength<u8>,
-    F: io::Read
+    F: io::Read,
 {
     let _n = io::copy(f, &mut d).expect("copying in hasher went wrong");
     let hash = d.result();
     format!("{:x}", hash)
 }
 
+#[cfg(feature = "gost94")]
+fn do_gost94_hash<D, F>(mut d: D, f: &mut F) -> String
+where
+    D: Gost94Digest,
+    F: io::Read,
+{
+    const BUFFER_SIZE: usize = 1024;
+    let mut buffer = [0u8; BUFFER_SIZE];
+    loop {
+        let n = match f.read(&mut buffer) {
+            Ok(n) => n,
+            Err(e) => return format!("{}", e),
+        };
+        d.input(&buffer[..n]);
+        if n == 0 || n < BUFFER_SIZE {
+            break;
+        }
+    }
+    let hash = d.result();
+    let mut out = String::new();
+    for byte in hash {
+        out.push_str(&format!("{:02x}", byte));
+    }
+    out
+}
+
 #[cfg(feature = "non-crypto")]
-fn do_other_hash<D, F>(mut d: D, f: &mut F) -> String
+fn do_hash_with_hasher<D, F>(mut d: D, f: &mut F) -> String
 where
     D: Hasher,
-    F: io::Read{
+    F: io::Read,
+{
     const BUFFER_SIZE: usize = 1024;
     let mut buffer = [0u8; BUFFER_SIZE];
     loop {
@@ -188,45 +218,70 @@ cfg_if! {
 }
 
 cfg_if! {
+    if #[cfg(feature = "gost94")]{
+        pub fn gost94pro<F: io::Read>(f: &mut F) -> String{
+            do_gost94_hash(gost94::Gost94CryptoPro::default() , f)
+        }
+        pub fn gost94s2015<F: io::Read>(f: &mut F) -> String{
+            do_gost94_hash(gost94::Gost94s2015::default() , f)
+        }
+        pub fn gost94test<F: io::Read>(f: &mut F) -> String{
+            do_gost94_hash(gost94::Gost94Test::default() , f)
+        }
+    }
+    else{
+        pub fn gost94pro<F: io::Read>(_f: &mut F) -> String{
+            String::from("not compiled with gost94")
+        }
+        pub fn gost94s2015<F: io::Read>(_f: &mut F) -> String{
+            String::from("not compiled with gost94")
+        }
+        pub fn gost94test<F: io::Read>(_f: &mut F) -> String{
+            String::from("not compiled with gost94")
+        }
+    }
+}
+
+cfg_if! {
     if #[cfg(feature = "non-crypto")]{
         pub fn crc32<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::crc::Crc32::default() , f)
+            do_hash_with_hasher(pruefung::crc::Crc32::default() , f)
         }
         pub fn crc32c<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::crc::Crc32c::default() , f)
+            do_hash_with_hasher(pruefung::crc::Crc32c::default() , f)
         }
         pub fn adler32<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::adler32::Adler32::default() , f)
+            do_hash_with_hasher(pruefung::adler32::Adler32::default() , f)
         }
         pub fn sum<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::bsd::Bsd::default() , f)
+            do_hash_with_hasher(pruefung::bsd::Bsd::default() , f)
         }
         pub fn sum_s<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::sysv::SysV::default() , f)
+            do_hash_with_hasher(pruefung::sysv::SysV::default() , f)
         }
         pub fn cksum<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::unix::Unix::default() , f)
+            do_hash_with_hasher(pruefung::unix::Unix::default() , f)
         }
         pub fn fnv32<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv32::Fnv32::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv32::Fnv32::default() , f)
         }
         pub fn fnv32a<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv32::Fnv32a::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv32::Fnv32a::default() , f)
         }
         pub fn fnv32z<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv32::Fnv32z::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv32::Fnv32z::default() , f)
         }
         pub fn fnv64<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv64::Fnv64::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv64::Fnv64::default() , f)
         }
         pub fn fnv64a<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv64::Fnv64a::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv64::Fnv64a::default() , f)
         }
         pub fn fnv64z<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fnv::fnv64::Fnv64z::default() , f)
+            do_hash_with_hasher(pruefung::fnv::fnv64::Fnv64z::default() , f)
         }
         pub fn fletcher16<F: io::Read>(f: &mut F) -> String{
-            do_other_hash(pruefung::fletcher16::Fletcher16::default() , f)
+            do_hash_with_hasher(pruefung::fletcher16::Fletcher16::default() , f)
         }
 
     } else{

@@ -8,9 +8,9 @@ edition = "2018"
 default = ["sha2"]
 md5 = ["md-5"]
 sha1 = ["sha-1"]
-all = ["sha-1", "sha2", "sha3", "blake2", "md-5", "whirlpool", "ripemd160", "ripemd320", "groestl", "pruefung"]
-crypto = ["sha-1", "sha2", "sha3", "blake2", "md-5", "whirlpool", "ripemd160", "ripemd320", "groestl"]
+crypto = ["sha-1", "sha2", "sha3", "blake2", "md-5", "whirlpool", "ripemd160", "ripemd320", "groestl", "gost94"]
 non-crypto = ["pruefung"]
+all = ["crypto", "non-crypto"]
 
 [dependencies]
 cfg-if = "*"
@@ -25,6 +25,7 @@ whirlpool = { version = "*", optional = true }
 ripemd160 = { version = "*", optional = true }
 ripemd320 = { version = "*", optional = true }
 groestl = { version = "*", optional = true }
+gost94 = { version = "*", optional = true }
 pruefung = { version = "*", optional = true}
 
 [lib]
